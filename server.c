@@ -68,8 +68,6 @@ static void accept_loop(int server_sd)
     pollfds[0].fd = server_sd;
     pollfds[0].events = POLLIN;
 
-    pthread_t client_handler_thread;
-
     while (IS_LOOP_RUNNING) {
         pollfds[0].revents = 0;
         if (poll(pollfds, 1, -1) < 0 && errno != EINTR) {
@@ -85,9 +83,10 @@ static void accept_loop(int server_sd)
                 exit(EXIT_FAILURE);
             }
 
+            pthread_t tid;
             int *arg = (int*) malloc(sizeof(int));
             *arg = client_sd;
-            int result = pthread_create(&client_handler_thread, NULL, &client_handler, arg);
+            int result = pthread_create(&tid, NULL, &client_handler, arg);
             if (result) {
                 close(client_sd);
                 close(server_sd);
@@ -95,6 +94,7 @@ static void accept_loop(int server_sd)
                 log_printf(LEVEL_ERROR, "accept loop: ошибка запуска потока обработки клиента (%s)", strerror(errno));
                 exit(EXIT_FAILURE);
             }
+            pthread_detach(tid);
         }
     }
 }

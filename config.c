@@ -32,9 +32,9 @@ static void create_default()
     fclose(f);
 }
 
-static int handler(void *user, const char *section, const char *name, const char *value)
+static int handler(void *rec, const char *section, const char *name, const char *value)
 {
-    config_t *cfg = (config_t*)user;
+    config_t *cfg = (config_t*)rec;
 
     #define MATCH(s, n) (strcmp(section, s) == 0) && (strcmp(name, n) == 0)
 
