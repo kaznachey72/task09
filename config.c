@@ -47,16 +47,20 @@ static int handler(void *rec, const char *section, const char *name, const char 
     return 1;
 }
 
-config_t get_config()
+void get_config(config_t *cfg)
 {
     if (!exists()) {
         create_default();
     }
 
-    config_t cfg;
-    if (ini_parse(CONF_FILE, handler, &cfg) < 0) {
+    config_clear(cfg);
+    if (ini_parse(CONF_FILE, handler, cfg) < 0) {
         log_printf(LEVEL_ERROR, "ini file: ошибка чтения конфигурационного файла (%s)", CONF_FILE);
         exit(EXIT_FAILURE);
     }
-    return cfg;
+}
+
+void config_clear(config_t *cfg)
+{
+    free(cfg->fpath);
 }

@@ -21,6 +21,11 @@ const int CONNECTION_LENGTH = 10;
 bool IS_LOOP_RUNNING = true;
 config_t cfg;
 
+typedef struct {
+    int client_sd;
+    char *fpath;
+} arg_t;
+
 
 static off_t fsize(const char *fpath)
 {
@@ -41,23 +46,24 @@ static off_t fsize(const char *fpath)
     return st.st_size;
 }
 
-static void *client_handler(void *arg)
+static void *client_handler(void *arg_)
 {
-   int client_sd = *(int*)arg;
-   free(arg);
+    arg_t *arg = (arg_t*)arg_;
 
     const char *template = "размер файла '%s': %ld байт\n";
-    size_t len = snprintf(NULL, 0, template, cfg.fpath, fsize(cfg.fpath)) + 1;
+    size_t len = snprintf(NULL, 0, template, arg->fpath, fsize(arg->fpath)) + 1;
     char *response = (char*)malloc(len);
     if (!response) {
         log_printf(LEVEL_ERROR, "client handler: ошибка формирования ответа (%s)", strerror(errno));
         exit(EXIT_FAILURE);
     }
-    snprintf(response, len, template, cfg.fpath, fsize(cfg.fpath));
+    snprintf(response, len, template, arg->fpath, fsize(arg->fpath));
 
-    write(client_sd, response, len);
+    write(arg->client_sd, response, len);
     free(response);
-    close(client_sd);
+    close(arg->client_sd);
+    free(arg->fpath);
+    free(arg);
 
     return NULL;
 }
@@ -84,8 +90,9 @@ static void accept_loop(int server_sd)
             }
 
             pthread_t tid;
-            int *arg = (int*) malloc(sizeof(int));
-            *arg = client_sd;
+            arg_t *arg = malloc(sizeof(arg_t));
+            arg->client_sd = client_sd;
+            arg->fpath = strdup(cfg.fpath);
             int result = pthread_create(&tid, NULL, &client_handler, arg);
             if (result) {
                 close(client_sd);
@@ -132,7 +139,7 @@ void srv_start()
 
     close(sd);
     unlink(SOCK_FILE);
-    pthread_exit(NULL);
+    config_clear(&cfg);
 }
 
 void srv_stop()
@@ -142,6 +149,6 @@ void srv_stop()
 
 void srv_update_config()
 {
-    cfg = get_config();
+    get_config(&cfg);
 }
 
